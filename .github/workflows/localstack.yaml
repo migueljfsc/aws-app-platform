@@ -35,6 +35,8 @@ jobs:
           - { name: S3, component: s3, context: app-infra-tf-state-dev-euw3 }
           - { name: IAM - ECS, component: iam, context: ecs-dev-euw3 }
           - { name: IAM - GitHub Actions, component: iam, context: github-actions-dev-euw3 }
+          # Public zone gates off both data sources (private_zone=false, create_zone=true).
+          - { name: Route53 - Public, component: route53, context: public-app-dev-euw3 }
     name: "${{ matrix.name }}"
 
     services:
