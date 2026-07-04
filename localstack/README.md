@@ -37,15 +37,15 @@ components run end-to-end on the free tier and are exercised by the
 |-----------|-------|
 | `s3`  | state bucket — fully supported |
 | `iam` | roles, policies, OIDC/SAML providers — fully supported |
-| `route53` (public) | `public-app-dev-euw3` — creates a public hosted zone; its data sources are disabled for public zones (`private_zone=false`, `create_zone=true`) |
+| `route53` (public) | `public-app-dev-euw3` — public hosted zone; data sources disabled for public zones (`private_zone=false`, `create_zone=true`) |
+| `route53` (private) | `private-app-dev-euw3` — private hosted zone; CI seeds a VPC (`ec2 create-vpc`) and points `vpc_name` at it, standing in for the Pro `network` component |
 
-The following need **LocalStack Pro** (`LOCALSTACK_AUTH_TOKEN`) and/or a
-pre-seeded environment, so they are not wired into CI:
+The following need **LocalStack Pro** (`LOCALSTACK_AUTH_TOKEN`), so they are not
+wired into CI:
 
 | Component | Reason |
 |-----------|--------|
-| `network` | reads `aws_ec2_transit_gateway` / managed prefix lists (Pro) |
-| `route53` (private) | `data.aws_vpc` requires an existing VPC (run `network` first) |
+| `network` | reads/creates Transit Gateway resources (Pro) |
 | `alb`, `cloudfront`, `waf`, `acm`, `api-gateway`, `ecs`, `rds`, `elasticache`, `budgets`, `quotas` | Pro-only services |
 
 > LocalStack reports account id `000000000000`; the registry tags such deploys
