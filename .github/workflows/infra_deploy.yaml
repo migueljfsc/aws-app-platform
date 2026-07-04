@@ -52,9 +52,10 @@ jobs:
           else
             base="${{ github.event.before }}"
           fi
-          # Fallback when base is missing/unknown (new branch, first push, force-push).
-          if [ -z "$base" ] || ! git cat-file -e "${base}^{commit}" 2>/dev/null; then
-            base="$(git rev-parse HEAD~1 2>/dev/null || git rev-parse HEAD)"
+          # Fall back to the empty tree when base is missing/unknown
+          # (first commit, new branch, force-push) so every file counts as changed.
+          if [ -z "$base" ] || ! git rev-parse -q --verify "${base}^{commit}" >/dev/null 2>&1; then
+            base="$(git hash-object -t tree /dev/null)"
           fi
           git diff --name-only "$base" "${{ github.sha }}" | tee changed.txt
 
