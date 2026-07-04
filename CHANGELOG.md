@@ -1,3 +1,9 @@
+## 0.3.3 (2026-07-04)
+
+### Fix
+
+- **localstack**: pre-create state bucket and enable s3control
+
 ## 0.3.2 (2026-07-04)
 
 ### Fix
