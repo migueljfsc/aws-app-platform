@@ -73,18 +73,16 @@ jobs:
           pip install terraform-local
           command -v tflocal
 
-      - name: Create state backend bucket
+      # Use a local state backend instead of S3 — the mock has nowhere durable
+      # to keep remote state, and it isn't needed for an ephemeral CI run.
+      # *_override.tf is both an OpenTofu override file and git-ignored.
+      - name: Use a local state backend
         run: |
-          aws --endpoint-url "$AWS_ENDPOINT_URL" s3api create-bucket \
-            --bucket tflocal-state --region "$AWS_DEFAULT_REGION" || true
+          printf 'terraform {\n  backend "local" {}\n}\n' \
+            > infrastructure/terraform/aws/${{ matrix.component }}/localstack_override.tf
 
       - name: Init
-        run: |
-          tflocal -chdir=infrastructure/terraform/aws/${{ matrix.component }} init \
-            -backend-config="bucket=tflocal-state" \
-            -backend-config="key=${{ matrix.component }}-${{ matrix.context }}/terraform.tfstate" \
-            -backend-config="region=${AWS_DEFAULT_REGION}" \
-            -reconfigure
+        run: tflocal -chdir=infrastructure/terraform/aws/${{ matrix.component }} init -reconfigure
 
       - name: Apply
         run: |

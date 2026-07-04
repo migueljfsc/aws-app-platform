@@ -45,7 +45,7 @@ export AWS_SECRET_ACCESS_KEY ?= test
 export AWS_DEFAULT_REGION    ?= us-east-1
 export AWS_ENDPOINT_URL      ?= http://localhost:4566
 
-.PHONY: ls-up ls-down ls-bucket ls-init ls-plan ls-apply ls-destroy
+.PHONY: ls-up ls-down ls-init ls-plan ls-apply ls-destroy
 
 ls-up:
 	docker compose -f localstack/docker-compose.yml up -d
@@ -56,16 +56,9 @@ ls-up:
 ls-down:
 	docker compose -f localstack/docker-compose.yml down
 
-ls-bucket:
-	aws --endpoint-url $(AWS_ENDPOINT_URL) s3api create-bucket \
-		--bucket $(LS_STATE_BUCKET) --region $(AWS_DEFAULT_REGION) || true
-
-ls-init: ls-bucket
-	$(TFLOCAL) -chdir=$(LS_CHDIR) init \
-		-backend-config="bucket=$(LS_STATE_BUCKET)" \
-		-backend-config="key=$(LS_COMPONENT)-$(LS_CONTEXT)/terraform.tfstate" \
-		-backend-config="region=$(AWS_DEFAULT_REGION)" \
-		-reconfigure
+ls-init:
+	printf 'terraform {\n  backend "local" {}\n}\n' > $(LS_CHDIR)/localstack_override.tf
+	$(TFLOCAL) -chdir=$(LS_CHDIR) init -reconfigure
 
 ls-plan: ls-init
 	$(TFLOCAL) -chdir=$(LS_CHDIR) plan -var-file=contexts/$(LS_CONTEXT).tfvars
