@@ -1,0 +1,158 @@
+name: OpenTofu CI/CD
+description: |
+  "Executes Infrastructure as Code (OpenTofu) plans and describes
+  state changes via dynamic OIDC roles"
+
+inputs:
+  deploy-context:
+    description: "The deploy context (e.g. app-dev-euw3)"
+    required: true
+  working-directory:
+    description: "The working directory for Terraform"
+    required: false
+    default: infrastructure/terraform/aws
+  aws-region:
+    description: "The AWS region"
+    required: false
+    default: eu-west-3
+  tofu-version:
+    description: "The OpenTofu version"
+    required: false
+    default: "1.6.0"
+  token:
+    description: "GitHub token for accessing private Terraform modules"
+    required: false
+    default: ""
+  command:
+    description: |
+      "Terraform command to run (plan or apply). Defaults to auto
+      (push=apply, else plan)"
+    required: false
+    default: auto
+  provision:
+    description: "Provision the Terraform module (plan and apply)"
+    required: false
+    default: "true"
+  state-path:
+    description: |
+      "Override the state path key. If empty, inferred from
+      working-directory (last two segments joined by '-')"
+    required: false
+    default: ""
+  arg-var:
+    description: "Extra -var arguments to pass to tofu (e.g. 'key1=value1,key2=value2')"
+    required: false
+    default: ""
+  arg-auto-approve:
+    description: "Auto-approve the plan"
+    required: false
+    default: "false"
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Extract environment and path
+      id: extract-vars
+      uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+      with:
+        script: |
+          // Extract Environment
+          const deploy_context = '${{ inputs.deploy-context }}';
+          let env = 'unknown';
+          if (/-dev-|dev$/.test(deploy_context)) env = 'dev';
+          else if (/-stg-|stg$/.test(deploy_context)) env = 'stg';
+          else if (/-prd-|prd$/.test(deploy_context)) env = 'prd';
+
+          // Extract State Key
+          const statePathInput = '${{ inputs.state-path }}';
+          let statePath;
+          if (statePathInput !== '') {
+            statePath = statePathInput;
+          } else {
+            // Infer from working-directory (last two segments)
+            // e.g. "infrastructure/terraform/aws/network" -> "aws-network"
+            const workDir = '${{ inputs.working-directory }}';
+            const parts = workDir.split('/').filter(p => p);
+            statePath = 'infra-' + parts.slice(-2).join('-');
+          }
+
+          // Map AWS Region to short format
+          const regionMap = {
+            "us-east-1": "use1", "us-east-2": "use2", "us-west-1": "usw1", "us-west-2": "usw2",
+            "ca-central-1": "can1", "ca-west-1": "can2", "mx-central-1": "mxc1",
+            "af-south-1": "afs1",
+            "ap-east-1": "ape1", "ap-east-2": "ape2", "ap-northeast-1": "apn1", "ap-northeast-2": "apn2", "ap-northeast-3": "apn3",
+            "ap-south-1": "aps3", "ap-south-2": "aps5", "ap-southeast-1": "aps1", "ap-southeast-2": "aps2", "ap-southeast-3": "aps4",
+            "ap-southeast-4": "aps6", "ap-southeast-5": "aps7", "ap-southeast-6": "aps8", "ap-southeast-7": "aps9",
+            "eu-central-1": "euc1", "eu-central-2": "euc2", "eu-west-1": "euw1", "eu-west-2": "euw2", "eu-west-3": "euw3",
+            "eu-north-1": "eun1", "eu-south-1": "eus1", "eu-south-2": "eus2",
+            "il-central-1": "ilc1", "me-central-1": "mec1", "me-south-1": "mes1",
+            "sa-east-1": "sae1"
+          };
+          const awsRegion = '${{ inputs.aws-region }}';
+          const shortRegion = regionMap[awsRegion] || 'unknown';
+
+          // Map Environment to AWS Account ID
+          const accountMap = {
+            "dev": "XXXXXXXXXXX",
+            "stg": "XXXXXXXXXXX"
+          };
+          const accountId = accountMap[env] || '';
+
+          return {
+            env: env,
+            accountId: accountId,
+            statePath: statePath,
+            shortRegion: shortRegion
+          };
+
+    - name: Configure Git for private modules
+      if: inputs.token != ''
+      shell: bash
+      run: |
+        git config --global url."https://git:${{ inputs.token }}@github.com/migueljfsc".insteadOf "https://github.com/migueljfsc"
+        git config --global url."https://${{ inputs.token }}:x-oauth-basic@github.com/migueljfsc".insteadOf ssh://git@github.com/migueljfsc
+
+    - name: Authenticate AWS
+      uses: aws-actions/configure-aws-credentials@99214aa6889fcddfa57764031d71add364327e59 # v6
+      with:
+        aws-region: ${{ inputs.aws-region }}
+        role-to-assume: |
+          arn:aws:iam::${{
+            fromJSON(steps.extract-vars.outputs.result).accountId
+          }}:role/github-actions-infra-${{ inputs.command != 'auto' &&
+          inputs.command || (github.event_name == 'push' && 'apply' || 'plan')
+          }}
+
+    - name: Setup TF
+      uses: opentofu/setup-opentofu@847eaa4afeb791b06daa46e8eafa8b1b68d7cfb4 # v2
+      with:
+        tofu_version: ${{ inputs.tofu-version }}
+        tofu_wrapper: false
+
+    - name: Provision TF
+      if: ${{ inputs.provision == 'true' }}
+      uses: op5dev/tf-via-pr@39ed2635c056ca408ed24cc5c2baf0ef4381a7a5 # v13
+      env: >-
+        ${{ inputs.token != '' && fromJSON(format('{{"GITHUB_TOKEN":"{0}"}}',
+        inputs.token)) || fromJSON('{}') }}
+      with:
+        tool: tofu
+        working-directory: ${{ inputs.working-directory }}
+        arg-backend-config: >-
+          bucket=app-infra-tf-state,key=${{fromJSON(steps.extract-vars.outputs.result).statePath
+          }}/${{ inputs.deploy-context }}/terraform.tfstate,region=${{
+          inputs.aws-region }}
+        command: >-
+          ${{ inputs.command != 'auto' && inputs.command || (github.event_name
+          == 'push' && 'apply' || 'plan') }}
+        arg-var-file: contexts/${{ inputs.deploy-context }}.tfvars
+        arg-var: ${{ inputs.arg-var }}
+        arg-lock: >-
+          ${{ inputs.command != 'auto' && (inputs.command == 'apply') ||
+          (github.event_name == 'push') }}
+        arg-auto-approve: ${{ inputs.arg-auto-approve == 'true' }}
+        arg-reconfigure: true
+        validate: true
+        format: true

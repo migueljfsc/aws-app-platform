@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>aws-app-platform</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #0b1020;
+        --fg: #e8ecf5;
+        --muted: #9aa4bf;
+        --accent: #4f9cff;
+        --card: #141b32;
+        --border: #253052;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        background: radial-gradient(1200px 600px at 50% -10%, #1b2547, var(--bg));
+        color: var(--fg);
+        padding: 24px;
+      }
+      main {
+        width: 100%;
+        max-width: 560px;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 40px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        color: var(--muted);
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        padding: 6px 12px;
+      }
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #34d399;
+        box-shadow: 0 0 0 4px rgba(52, 211, 153, 0.15);
+      }
+      h1 { font-size: 28px; margin: 20px 0 8px; }
+      p { color: var(--muted); line-height: 1.6; margin: 0 0 24px; }
+      .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      .kv {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 12px 14px;
+      }
+      .kv span { display: block; font-size: 12px; color: var(--muted); }
+      .kv strong { font-size: 15px; }
+      a { color: var(--accent); text-decoration: none; }
+      footer { margin-top: 24px; font-size: 13px; color: var(--muted); }
+    </style>
+  </head>
+  <body>
+    <main>
+      <span class="badge"><span class="dot"></span> service is running</span>
+      <h1>aws-app-platform</h1>
+      <p>
+        Minimal frontend service — containerized and deployed to AWS ECS behind
+        an Application Load Balancer, provisioned with OpenTofu.
+      </p>
+      <div class="grid">
+        <div class="kv"><span>Port</span><strong>3000</strong></div>
+        <div class="kv"><span>Health check</span><strong><a href="/health">/health</a></strong></div>
+        <div class="kv"><span>Runtime</span><strong>Node.js</strong></div>
+        <div class="kv"><span>Deploy target</span><strong>ECS / Fargate</strong></div>
+      </div>
+      <footer>Built as a portfolio piece &middot; infrastructure as code + app delivery</footer>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,18 @@
+[
+  { "name": "ACM (eu-west-3)",      "dir": "infrastructure/terraform/aws/acm",         "context": "app-dev-euw3" },
+  { "name": "ACM (us-east-1)",      "dir": "infrastructure/terraform/aws/acm",         "context": "app-dev-use1", "region": "us-east-1" },
+  { "name": "ALB",                  "dir": "infrastructure/terraform/aws/alb",         "context": "app-dev-euw3" },
+  { "name": "API Gateway",          "dir": "infrastructure/terraform/aws/api-gateway", "context": "app-api-dev-euw3" },
+  { "name": "Budgets",              "dir": "infrastructure/terraform/aws/budgets",     "context": "budgets-dev-euw3" },
+  { "name": "CloudFront",           "dir": "infrastructure/terraform/aws/cloudfront",  "context": "app-dev-euw3" },
+  { "name": "EC2 Bastion",          "dir": "infrastructure/terraform/aws/ec2",         "context": "bastion-dev-euw3" },
+  { "name": "IAM - ECS",            "dir": "infrastructure/terraform/aws/iam",         "context": "ecs-dev-euw3" },
+  { "name": "IAM - GitHub Actions", "dir": "infrastructure/terraform/aws/iam",         "context": "github-actions-dev-euw3" },
+  { "name": "Network",              "dir": "infrastructure/terraform/aws/network",     "context": "app-dev-euw3" },
+  { "name": "Quotas",               "dir": "infrastructure/terraform/aws/quotas",      "context": "quotas-dev-euw3" },
+  { "name": "Route53 - Private",    "dir": "infrastructure/terraform/aws/route53",     "context": "private-app-dev-euw3" },
+  { "name": "Route53 - Public",     "dir": "infrastructure/terraform/aws/route53",     "context": "public-app-dev-euw3" },
+  { "name": "S3 - TF State",        "dir": "infrastructure/terraform/aws/s3",          "context": "app-infra-tf-state-dev-euw3" },
+  { "name": "WAF - CloudFront",     "dir": "infrastructure/terraform/aws/waf",         "context": "cloudfront-dev-euw3" },
+  { "name": "GitHub",               "dir": "app/infrastructure/terraform/github",      "context": "app-dev", "state_path": "infra-github", "needs_token": true }
+]

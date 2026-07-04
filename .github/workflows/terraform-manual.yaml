@@ -1,0 +1,86 @@
+name: "Manual Terraform"
+
+on:
+  workflow_dispatch:
+    inputs:
+      working-directory:
+        description: "Terraform component"
+        required: true
+        type: choice
+        options:
+          - aws/acm
+          - aws/alb
+          - aws/budgets
+          - aws/iam
+          - aws/network
+          - aws/route53
+          - aws/s3
+          - aws/waf
+          - github
+      deploy-context:
+        description: "Deploy context (e.g. app-dev-euw3)"
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+  checks: write
+  id-token: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    name: "Plan - ${{ inputs.deploy-context }}"
+    steps:
+      - name: Check out
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+
+      - name: "Terraform Plan"
+        uses: ./.github/actions/terraform
+        with:
+          working-directory: infrastructure/terraform/${{ inputs.working-directory }}
+          deploy-context: ${{ inputs.deploy-context }}
+          command: plan
+
+  approve:
+    runs-on: ubuntu-latest
+    needs: plan
+    name: "Approve"
+    steps:
+      - name: Wait for approval
+        uses: trstringer/manual-approval@74d99dff7380e3e4b122d4ededcbca2b6ce59367 # v1
+        with:
+          secret: ${{ github.TOKEN }}
+          approvers: migueljfsc
+          minimum-approvals: 1
+          timeout-minutes: 10
+          issue-title: "Approve Terraform apply for ${{ inputs.deploy-context }}"
+          issue-body: |
+            **Component:** `${{ inputs.working-directory }}`
+            **Deploy context:** `${{ inputs.deploy-context }}`
+            **Triggered by:** @${{ github.actor }}
+            **Plan output:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            Please comment **approved** or **denied** to proceed.
+
+  apply:
+    runs-on: ubuntu-latest
+    needs: approve
+    name: "Apply - ${{ inputs.deploy-context }}"
+    steps:
+      - name: Check out
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+
+      - name: "Terraform Apply"
+        uses: ./.github/actions/terraform
+        with:
+          working-directory: infrastructure/terraform/${{ inputs.working-directory }}
+          deploy-context: ${{ inputs.deploy-context }}
+          command: apply

@@ -1,0 +1,48 @@
+name: Pre-Commit
+
+on:
+  pull_request:
+
+permissions:
+  actions: read
+  contents: read
+  checks: write
+  id-token: write
+  pull-requests: write
+
+jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+    if: >
+      !contains(github.event.head_commit.message, '[skip ci]')
+    name: "Pre-commit checks"
+    steps:
+      - name: Check out
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+
+      - name: "Tofu Setup"
+        uses: ./.github/actions/terraform
+        with:
+          deploy-context: "-dev-"
+          provision: "false"
+
+      - name: "Terraform-docs Setup"
+        shell: bash
+        run: |
+          curl -sSLo terraform-docs.tar.gz https://github.com/terraform-docs/terraform-docs/releases/download/v0.19.0/terraform-docs-v0.19.0-linux-amd64.tar.gz
+          tar -xzf terraform-docs.tar.gz terraform-docs
+          sudo mv terraform-docs /usr/local/bin/
+          rm terraform-docs.tar.gz
+
+      - name: Install tflint
+        shell: bash
+        run: |
+          curl -sSLo tflint.zip https://github.com/terraform-linters/tflint/releases/download/v0.55.0/tflint_linux_amd64.zip
+          unzip tflint.zip tflint
+          sudo mv tflint /usr/local/bin/
+          rm tflint.zip
+
+      - name: Run pre-commit
+        uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1

@@ -1,0 +1,40 @@
+{
+  $schema: 'https://docs.renovatebot.com/renovate-schema.json',
+  gitAuthor: 'migueljfsc <migueljfsc@users.noreply.github.com>',
+  extends: [
+    'config:recommended',
+    'docker:enableMajor',
+    ':disableRateLimiting',
+    ':dependencyDashboard',
+    'group:allNonMajor',
+    ':rebaseStalePrs',
+    ':semanticCommits',
+    ':enablePreCommit',
+    ':automergeDigest',
+    ':automergeBranch',
+    'helpers:pinGitHubActionDigests',
+    'security:minimumReleaseAgeNpm',
+    'github>migueljfsc/aws-app-platform//renovate/autoMerge.json5',
+    'github>migueljfsc/aws-app-platform//renovate/labels.json5',
+    'github>migueljfsc/aws-app-platform//renovate/managers.json5',
+    'github>migueljfsc/aws-app-platform//renovate/semanticCommits.json5',
+  ],
+  suppressNotifications: [
+    'prIgnoreNotification',
+  ],
+  rebaseWhen: 'conflicted',
+  commitBodyTable: true,
+  assignees: [
+    'migueljfsc',
+  ],
+  labels: [
+    'renovate',
+    'maintenance',
+    'automation',
+  ],
+  platformAutomerge: true,
+  dependencyDashboardLabels: [
+    'renovate-dashboard',
+  ],
+  dependencyDashboardTitle: 'Renovate Dashboard 🤖',
+}

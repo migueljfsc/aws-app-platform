@@ -1,0 +1,118 @@
+name: "[Terraform] Infra Deploy"
+
+on:
+  pull_request:
+    paths:
+      - "infrastructure/terraform/**"
+      - "app/infrastructure/terraform/github/**"
+      - ".github/actions/terraform/**"
+      - ".github/infra-components.json"
+      - ".github/workflows/infra_deploy.yaml"
+  push:
+    branches: [main]
+    paths:
+      - "infrastructure/terraform/**"
+      - "app/infrastructure/terraform/github/**"
+      - ".github/actions/terraform/**"
+      - ".github/infra-components.json"
+      - ".github/workflows/infra_deploy.yaml"
+
+permissions:
+  actions: read
+  contents: read
+  checks: write
+  id-token: write
+  pull-requests: write
+
+jobs:
+  # ============================================================================
+  # Detect which components changed and build the deploy matrix.
+  # A change to the registry module, the terraform action, the component
+  # catalog, or this workflow runs every component.
+  # ============================================================================
+  detect:
+    runs-on: ubuntu-latest
+    if: >
+      !contains(github.event.head_commit.message, '[skip ci]')
+    outputs:
+      matrix: ${{ steps.build.outputs.matrix }}
+      has_changes: ${{ steps.build.outputs.has_changes }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+
+      - name: Determine changed files
+        id: diff
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+          else
+            base="${{ github.event.before }}"
+          fi
+          # Fallback when base is missing/unknown (new branch, first push, force-push).
+          if [ -z "$base" ] || ! git cat-file -e "${base}^{commit}" 2>/dev/null; then
+            base="$(git rev-parse HEAD~1 2>/dev/null || git rev-parse HEAD)"
+          fi
+          git diff --name-only "$base" "${{ github.sha }}" | tee changed.txt
+
+      - name: Build matrix
+        id: build
+        shell: bash
+        run: |
+          # Universal changes force the full matrix.
+          if grep -qE '^(infrastructure/terraform/modules/registry/|\.github/actions/terraform/|\.github/infra-components\.json|\.github/workflows/infra_deploy\.yaml)' changed.txt; then
+            run_all=true
+          else
+            run_all=false
+          fi
+
+          changed_json="$(jq -R -s 'split("\n") | map(select(length > 0))' changed.txt)"
+
+          matrix="$(jq -c \
+            --argjson changed "$changed_json" \
+            --arg run_all "$run_all" '
+              {
+                include: [
+                  .[] | . as $c | select(
+                    $run_all == "true"
+                    or ($changed | any(startswith($c.dir + "/")))
+                  )
+                ]
+              }
+            ' .github/infra-components.json)"
+
+          count="$(echo "$matrix" | jq '.include | length')"
+          echo "has_changes=$([ "$count" -gt 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+
+          echo "Selected $count component(s):"
+          echo "$matrix" | jq -r '.include[].name'
+
+  # ============================================================================
+  # Plan (PR) / Apply (push to main) each selected component in parallel.
+  # ============================================================================
+  deploy:
+    needs: detect
+    if: ${{ needs.detect.outputs.has_changes == 'true' }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.detect.outputs.matrix) }}
+    name: "${{ matrix.name }}"
+    steps:
+      - name: Check out
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+
+      - name: "Terraform Plan/Apply"
+        uses: ./.github/actions/terraform
+        with:
+          working-directory: ${{ matrix.dir }}
+          deploy-context: ${{ matrix.context }}
+          aws-region: ${{ matrix.region || 'eu-west-3' }}
+          state-path: ${{ matrix.state_path || '' }}
+          token: ${{ matrix.needs_token && secrets.GH_TERRAFORM_ADMINISTRATION_TOKEN || '' }}

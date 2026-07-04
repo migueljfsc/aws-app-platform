@@ -1,0 +1,14 @@
+---
+commitizen:
+  bump_message: "chore(release): bump $current_version \u2192 $new_version [skip ci]"
+  customize:
+    change_type_map: '{"feat"="Feat","fix"="Fix","refactor"= "Refactor","perf"="Perf","docs"="Docs","style"="Style"}'
+    changelog_pattern: '^((BREAKING[\-\ ]CHANGE|\w+)(\(.+\))?!?):'
+    commit_parser: "^((?P<change_type>feat|fix|refactor|perf|docs|style|refactor|BREAKING\
+      \ CHANGE)(?:\\((?P<scope>[^()\r\n]*)\\)|\\()?(?P<breaking>!)?|\\w+!):\\s(?P<message>.*)?"
+  major_version_zero: false
+  name: cz_conventional_commits
+  tag_format: $version
+  update_changelog_on_bump: true
+  version: 4.9.1
+  version_scheme: semver

@@ -1,0 +1,101 @@
+name: Docker Build & Push
+description: "Builds, tags, and pushes multi-architecture Docker container
+  images to Amazon ECR"
+
+inputs:
+  environment:
+    description: "The environment"
+    required: false
+    default: dev
+  image-name:
+    description: "The image name"
+    required: true
+  aws-region:
+    description: "The AWS region"
+    required: false
+    default: eu-west-3
+  context:
+    description: "Docker build context"
+    required: false
+    default: .
+  build-args:
+    description: "Docker build args"
+    required: false
+    default: ""
+  file:
+    description: "Dockerfile path"
+    required: false
+    default: ./Dockerfile
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Extract variables
+      id: extract-vars
+      uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+      with:
+        script: |
+          const env = '${{ inputs.environment }}';
+          const awsRegion = '${{ inputs.aws-region }}';
+
+          // Map Environment to AWS Account ID
+          const accountMap = {
+            "dev": "123456789012",
+            "stg": "123456789012"
+          };
+          const accountId = accountMap[env] || '';
+
+          const registry = `${accountId}.dkr.ecr.${awsRegion}.amazonaws.com`;
+
+          return {
+            accountId: accountId,
+            registry: registry
+          };
+
+    - name: Authenticate AWS
+      uses: aws-actions/configure-aws-credentials@99214aa6889fcddfa57764031d71add364327e59 # v6
+      with:
+        aws-region: ${{ inputs.aws-region }}
+        role-to-assume: |
+          arn:aws:iam::${{
+          fromJSON(steps.extract-vars.outputs.result).accountId
+          }}:role/github-actions-ecr-builder
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@fa648b43de3d4d023bcb3f89ed6940096949c419 # v2
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@06116385d9baf250c9f4dcb4858b16962ea869c3 # v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4
+
+    - name: Generate image metadata
+      id: image
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ inputs.registry }}/travelreaktor/${{ inputs.image-name }}
+        tags: |
+          type=raw,value=${{ github.run_number }}-{{sha}},priority=1000
+          type=ref,event=branch
+          type=ref,event=pr
+          type=raw,value=latest,enable={{is_default_branch}}
+          type=semver,pattern={{version}}
+          type=match,pattern=release/(.*),group=1,enable=${{ startsWith(github.ref, 'refs/heads/release/') }}
+          ${{ steps.extra.outputs.tags }}
+
+    - name: Build and push to Docker
+      uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7
+      with:
+        context: ${{ inputs.context }}
+        file: ${{ inputs.file }}
+        build-args: |
+          ${{ inputs.build-args }}
+        push: true
+        tags: ${{ steps.image.outputs.tags }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        provenance: false
+        outputs: type=image,oci-mediatypes=false

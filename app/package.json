@@ -1,0 +1,13 @@
+{
+  "name": "aws-app-platform-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Minimal frontend service for aws-app-platform",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

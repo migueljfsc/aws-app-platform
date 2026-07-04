@@ -1,0 +1,88 @@
+name: ECS Deploy
+description: "Orchestrates zero-downtime deployments of new task definitions to
+  Amazon ECS services"
+
+inputs:
+  deploy-context:
+    description: "The deploy context"
+    required: true
+  service-name:
+    description: "The service name"
+    required: true
+  image-name:
+    description: "The image name"
+    required: false
+    default: ""
+  image-tag:
+    description: "The image tag"
+    required: true
+  aws-region:
+    description: "The AWS region"
+    required: false
+    default: eu-west-3
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Extract variables
+      id: extract-vars
+      uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+      with:
+        script: |
+          const awsRegion = '${{ inputs.aws-region }}';
+
+          // Extract Environment
+          const deploy_context = '${{ inputs.deploy-context }}';
+          let env = 'unknown';
+          if (deploy_context.includes('dev-')) env = 'dev';
+          else if (deploy_context.includes('stg-')) env = 'stg';
+          else if (deploy_context.includes('prd-')) env = 'prd';
+
+          // Map Environment to AWS Account ID
+          const accountMap = {
+            "dev": "123456789012",
+            "stg": "123456789012"
+          };
+          const accountId = accountMap[env] || '';
+
+          const registry = `${accountId}.dkr.ecr.${awsRegion}.amazonaws.com`;
+
+          return {
+            env: env,
+            accountId: accountId,
+            registry: registry
+          };
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@99214aa6889fcddfa57764031d71add364327e59 # v6
+      with:
+        aws-region: ${{ inputs.aws-region }}
+        role-to-assume: arn:aws:iam::${{
+          fromJSON(steps.extract-vars.outputs.result).accountId
+          }}:role/github-actions-ecs-deployer
+
+    - name: Download task definition
+      shell: bash
+      run: |
+        aws ecs describe-task-definition \
+          --task-definition ${{ inputs.service-name }}-${{ inputs.deploy-context }}-task \
+          --query taskDefinition \
+          > task-definition.json
+
+    - name: Render new task definition
+      id: render-task-def
+      uses: aws-actions/amazon-ecs-render-task-definition@6853cfae8c3a7d978fbf68b5a55453395541dfbb # v1
+      with:
+        task-definition: task-definition.json
+        container-name: ${{ inputs.service-name }}
+        image: ${{ fromJSON(steps.extract-vars.outputs.result).registry }}/${{
+          inputs.image-name || inputs.service-name }}:${{ inputs.image-tag }}
+
+    - name: Deploy to ECS
+      uses: aws-actions/amazon-ecs-deploy-task-definition@fc8fc60f3a60ffd500fcb13b209c59d221ac8c8c # v2
+      with:
+        task-definition: ${{ steps.render-task-def.outputs.task-definition }}
+        cluster: ${{ inputs.service-name }}-${{ inputs.deploy-context }}-cluster
+        service: ${{ inputs.service-name }}-${{ inputs.deploy-context }}-service
+        wait-for-service-stability: true
