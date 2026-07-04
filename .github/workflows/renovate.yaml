@@ -16,19 +16,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      # - name: Get token
-      #   id: get_token
-      #   uses: actions/create-github-app-token@v2
-      #   with:
-      #     private-key: ${{ secrets.private_key }}
-      #     app-id: ${{ secrets.app_id }}
-      #     owner: ${{ github.repository_owner }}
       - name: Self-hosted Renovate
         uses: renovatebot/github-action@693b9ef15eec82123529a37c782242f091365961 # v46.1.14
         with:
           configurationFile: renovate.json5
-          token: ${{ secrets.GH_RENOVATE_TOKEN }}
-          #token: "${{ steps.get_token.outputs.token }}"
+          token: ${{ secrets.GITHUB_TOKEN }}
         env:
           RENOVATE_AUTODISCOVER: "true"
           RENOVATE_AUTODISCOVER_FILTER: "migueljfsc/app-*"

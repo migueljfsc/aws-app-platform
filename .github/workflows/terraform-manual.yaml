@@ -1,4 +1,4 @@
-name: "Manual Terraform"
+name: "[Terraform] Manual Terraform"
 
 on:
   workflow_dispatch:
