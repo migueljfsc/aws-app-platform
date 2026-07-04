@@ -1,0 +1,86 @@
+name: "[LocalStack] Terraform"
+
+# Applies the free-tier (LocalStack Community) components against a mock AWS,
+# proving the Terraform actually creates resources without a real account.
+# No cloud credentials or OIDC — everything runs against LocalStack.
+
+on:
+  pull_request:
+    paths:
+      - "infrastructure/terraform/aws/s3/**"
+      - "infrastructure/terraform/aws/iam/**"
+      - "infrastructure/terraform/modules/registry/**"
+      - "localstack/**"
+      - ".github/workflows/localstack.yaml"
+  push:
+    branches: [main]
+    paths:
+      - "infrastructure/terraform/aws/s3/**"
+      - "infrastructure/terraform/aws/iam/**"
+      - "infrastructure/terraform/modules/registry/**"
+      - "localstack/**"
+      - ".github/workflows/localstack.yaml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tflocal:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: S3, component: s3, context: app-infra-tf-state-dev-euw3 }
+          - { name: IAM - ECS, component: iam, context: ecs-dev-euw3 }
+          - { name: IAM - GitHub Actions, component: iam, context: github-actions-dev-euw3 }
+    name: "${{ matrix.name }}"
+
+    services:
+      localstack:
+        image: localstack/localstack:4
+        ports:
+          - 4566:4566
+        env:
+          SERVICES: "s3,iam,sts,ec2,route53,sns,ecr,kms,secretsmanager,logs"
+        options: >-
+          --health-cmd "curl -sf http://localhost:4566/_localstack/health || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 12
+
+    env:
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_DEFAULT_REGION: us-east-1
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Setup OpenTofu
+        uses: opentofu/setup-opentofu@847eaa4afeb791b06daa46e8eafa8b1b68d7cfb4 # v2
+        with:
+          tofu_wrapper: false
+
+      - name: Install tofulocal
+        run: |
+          pip install terraform-local
+          command -v tofulocal
+
+      - name: Init
+        run: |
+          tofulocal -chdir=infrastructure/terraform/aws/${{ matrix.component }} init \
+            -backend-config="bucket=tflocal-state" \
+            -backend-config="key=${{ matrix.component }}-${{ matrix.context }}/terraform.tfstate" \
+            -backend-config="region=${AWS_DEFAULT_REGION}" \
+            -reconfigure
+
+      - name: Apply
+        run: |
+          tofulocal -chdir=infrastructure/terraform/aws/${{ matrix.component }} apply \
+            -auto-approve -var-file=contexts/${{ matrix.context }}.tfvars
+
+      - name: Show created resources
+        run: tofulocal -chdir=infrastructure/terraform/aws/${{ matrix.component }} state list

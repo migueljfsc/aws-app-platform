@@ -1,0 +1,18 @@
+services:
+  localstack:
+    image: localstack/localstack:4
+    container_name: aws-app-platform-localstack
+    ports:
+      - "4566:4566" # single edge port for all services
+    environment:
+      # Community-edition services exercised by the free-tier components.
+      SERVICES: "s3,iam,sts,ec2,route53,sns,ecr,kms,secretsmanager,logs,lambda"
+      DEBUG: "0"
+    volumes:
+      - "./volume:/var/lib/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:4566/_localstack/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10

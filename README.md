@@ -2,6 +2,7 @@
 
 [![Release](https://github.com/migueljfsc/aws-app-platform/actions/workflows/release.yaml/badge.svg?branch=main)](https://github.com/migueljfsc/aws-app-platform/actions/workflows/release.yaml)
 [![Infra Deploy](https://github.com/migueljfsc/aws-app-platform/actions/workflows/infra_deploy.yaml/badge.svg?branch=main)](https://github.com/migueljfsc/aws-app-platform/actions/workflows/infra_deploy.yaml)
+[![LocalStack](https://github.com/migueljfsc/aws-app-platform/actions/workflows/localstack.yaml/badge.svg?branch=main)](https://github.com/migueljfsc/aws-app-platform/actions/workflows/localstack.yaml)
 
 Portfolio monorepo for an AWS application platform, provisioned with OpenTofu.
 Contains reusable Terraform modules, their concrete per-environment stacks, and a
@@ -68,6 +69,18 @@ All infrastructure is deployed by a single workflow — `.github/workflows/infra
 
 Add or remove a component by editing the JSON catalog; the workflow is unchanged.
 One-off runs (any component, plan → approve → apply) use `terraform-manual.yaml`.
+
+### Local testing without an AWS account
+
+The stack can be applied against a **mock AWS** (no account, no cost) using
+[LocalStack](https://localstack.cloud/) — see [`localstack/`](localstack/). The
+free tier covers `s3` and `iam` end-to-end (exercised by the `localstack.yaml`
+CI workflow); other components need LocalStack Pro.
+
+```bash
+make ls-up
+make ls-apply LS_COMPONENT=s3 LS_CONTEXT=app-infra-tf-state-dev-euw3
+```
 
 ## Getting Started (local plan)
 
