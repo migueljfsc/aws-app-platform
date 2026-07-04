@@ -6,7 +6,7 @@
     'docker:enableMajor',
     ':disableRateLimiting',
     ':dependencyDashboard',
-    'group:allNonMajor',
+    // 'group:allNonMajor',
     ':rebaseStalePrs',
     ':semanticCommits',
     ':enablePreCommit',
@@ -18,6 +18,18 @@
     'github>migueljfsc/aws-app-platform//renovate/labels.json5',
     'github>migueljfsc/aws-app-platform//renovate/managers.json5',
     'github>migueljfsc/aws-app-platform//renovate/semanticCommits.json5',
+  ],
+  // Delete this section if you want to use the default grouping behavior
+  packageRules: [
+    {
+      description: 'Combine all major, minor and patch updates into a single PR',
+      groupName: 'all dependencies',
+      groupSlug: 'all',
+      separateMajorMinor: false,
+      matchPackageNames: [
+        '*',
+      ],
+    },
   ],
   suppressNotifications: [
     'prIgnoreNotification',
