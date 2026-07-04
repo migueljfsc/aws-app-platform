@@ -6,9 +6,9 @@ commitizen:
     changelog_pattern: '^((BREAKING[\-\ ]CHANGE|\w+)(\(.+\))?!?):'
     commit_parser: "^((?P<change_type>feat|fix|refactor|perf|docs|style|refactor|BREAKING\
       \ CHANGE)(?:\\((?P<scope>[^()\r\n]*)\\)|\\()?(?P<breaking>!)?|\\w+!):\\s(?P<message>.*)?"
-  major_version_zero: false
+  major_version_zero: true
   name: cz_conventional_commits
   tag_format: $version
   update_changelog_on_bump: true
-  version: 4.10.0
+  version: 0.1.0
   version_scheme: semver
