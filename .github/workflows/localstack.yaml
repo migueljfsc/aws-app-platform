@@ -37,6 +37,9 @@ jobs:
           - { name: IAM - GitHub Actions, component: iam, context: github-actions-dev-euw3 }
           # Public zone gates off both data sources (private_zone=false, create_zone=true).
           - { name: Route53 - Public, component: route53, context: public-app-dev-euw3 }
+          # Private zone needs a VPC to associate. Full `network` is Pro (Transit
+          # Gateway), so seed just the VPC it would create and point route53 at it.
+          - { name: Route53 - Private, component: route53, context: private-app-dev-euw3, seed_vpc: true, apply_args: "-var vpc_name=ls-seed-vpc" }
     name: "${{ matrix.name }}"
 
     services:
@@ -83,13 +86,22 @@ jobs:
           printf 'terraform {\n  backend "local" {}\n}\n' \
             > infrastructure/terraform/aws/${{ matrix.component }}/localstack_override.tf
 
+      # Stands in for the (Pro) network component: create the VPC that
+      # route53's private zone associates with, tagged to match vpc_name.
+      - name: Seed VPC dependency
+        if: ${{ matrix.seed_vpc }}
+        run: |
+          aws --endpoint-url "$AWS_ENDPOINT_URL" ec2 create-vpc \
+            --cidr-block 10.0.0.0/16 --region "$AWS_DEFAULT_REGION" \
+            --tag-specifications 'ResourceType=vpc,Tags=[{Key=Name,Value=ls-seed-vpc}]'
+
       - name: Init
         run: tflocal -chdir=infrastructure/terraform/aws/${{ matrix.component }} init -reconfigure
 
       - name: Apply
         run: |
           tflocal -chdir=infrastructure/terraform/aws/${{ matrix.component }} apply \
-            -auto-approve -var-file=contexts/${{ matrix.context }}.tfvars
+            -auto-approve -var-file=contexts/${{ matrix.context }}.tfvars ${{ matrix.apply_args }}
 
       - name: Show created resources
         run: tflocal -chdir=infrastructure/terraform/aws/${{ matrix.component }} state list
