@@ -1,4 +1,5 @@
-## Rendered Diagrams
+# Diagrams
 
-### 1. CI/CD Pipeline flow
-![CICD](cicd.drawio.svg)
+## CI/CD Pipeline flow
+
+![CI/CD pipeline](cicd.drawio.svg)
