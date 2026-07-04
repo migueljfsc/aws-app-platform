@@ -1,3 +1,9 @@
+## 0.4.0 (2026-07-04)
+
+### Feat
+
+- **localstack**: add route53 private zone via a seeded VPC (free)
+
 ## 0.3.4 (2026-07-04)
 
 ### Fix
