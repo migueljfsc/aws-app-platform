@@ -43,7 +43,7 @@ jobs:
         ports:
           - 4566:4566
         env:
-          SERVICES: "s3,iam,sts,ec2,route53,sns,ecr,kms,secretsmanager,logs"
+          SERVICES: "s3,s3control,iam,sts,ec2,route53,sns,ecr,kms,secretsmanager,logs"
         options: >-
           --health-cmd "curl -sf http://localhost:4566/_localstack/health || exit 1"
           --health-interval 10s
@@ -72,6 +72,11 @@ jobs:
         run: |
           pip install terraform-local
           command -v tflocal
+
+      - name: Create state backend bucket
+        run: |
+          aws --endpoint-url "$AWS_ENDPOINT_URL" s3api create-bucket \
+            --bucket tflocal-state --region "$AWS_DEFAULT_REGION" || true
 
       - name: Init
         run: |

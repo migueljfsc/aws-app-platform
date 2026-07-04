@@ -6,7 +6,7 @@ services:
       - "4566:4566" # single edge port for all services
     environment:
       # Community-edition services exercised by the free-tier components.
-      SERVICES: "s3,iam,sts,ec2,route53,sns,ecr,kms,secretsmanager,logs,lambda"
+      SERVICES: "s3,s3control,iam,sts,ec2,route53,sns,ecr,kms,secretsmanager,logs,lambda"
       DEBUG: "0"
     volumes:
       - "./volume:/var/lib/localstack"
