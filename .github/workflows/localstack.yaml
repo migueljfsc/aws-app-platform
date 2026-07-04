@@ -55,6 +55,9 @@ jobs:
       AWS_SECRET_ACCESS_KEY: test
       AWS_DEFAULT_REGION: us-east-1
       TF_CMD: tofu # make tflocal drive OpenTofu instead of terraform
+      # Route every AWS API call (incl. STS credential validation) at LocalStack.
+      # The provider honours this natively, regardless of the .tf provider block.
+      AWS_ENDPOINT_URL: "http://localhost:4566"
 
     steps:
       - name: Check out
