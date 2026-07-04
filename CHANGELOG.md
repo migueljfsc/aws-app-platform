@@ -1,3 +1,9 @@
+## 0.3.4 (2026-07-04)
+
+### Fix
+
+- **localstack**: use a local state backend (no S3 backend in the mock)
+
 ## 0.3.3 (2026-07-04)
 
 ### Fix
