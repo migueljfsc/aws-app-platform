@@ -1,3 +1,9 @@
+## 0.3.1 (2026-07-04)
+
+### Fix
+
+- **localstack**: use tflocal with TF_CMD=tofu (tofulocal binary does not exist)
+
 ## 0.3.0 (2026-07-04)
 
 ### Feat
