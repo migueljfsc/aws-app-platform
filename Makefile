@@ -33,12 +33,13 @@ tofu-apply:
 # Runs OpenTofu against LocalStack via the `tofulocal` wrapper (terraform-local).
 # Free-tier components: s3, iam. Override with COMPONENT / CONTEXT.
 # =============================================================================
-TFLOCAL          ?= tofulocal
+TFLOCAL          ?= tflocal
 LS_COMPONENT     ?= s3
 LS_CONTEXT       ?= app-infra-tf-state-dev-euw3
 LS_CHDIR          = infrastructure/terraform/aws/$(LS_COMPONENT)
 LS_STATE_BUCKET  ?= tflocal-state
 
+export TF_CMD                ?= tofu # make tflocal drive OpenTofu
 export AWS_ACCESS_KEY_ID     ?= test
 export AWS_SECRET_ACCESS_KEY ?= test
 export AWS_DEFAULT_REGION    ?= us-east-1

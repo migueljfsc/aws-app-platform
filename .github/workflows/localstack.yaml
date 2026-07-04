@@ -1,4 +1,4 @@
-name: "[LocalStack] Terraform"
+name: "[Terraform] LocalStack"
 
 # Applies the free-tier (LocalStack Community) components against a mock AWS,
 # proving the Terraform actually creates resources without a real account.
@@ -54,6 +54,7 @@ jobs:
       AWS_ACCESS_KEY_ID: test
       AWS_SECRET_ACCESS_KEY: test
       AWS_DEFAULT_REGION: us-east-1
+      TF_CMD: tofu # make tflocal drive OpenTofu instead of terraform
 
     steps:
       - name: Check out
@@ -64,14 +65,14 @@ jobs:
         with:
           tofu_wrapper: false
 
-      - name: Install tofulocal
+      - name: Install tflocal
         run: |
           pip install terraform-local
-          command -v tofulocal
+          command -v tflocal
 
       - name: Init
         run: |
-          tofulocal -chdir=infrastructure/terraform/aws/${{ matrix.component }} init \
+          tflocal -chdir=infrastructure/terraform/aws/${{ matrix.component }} init \
             -backend-config="bucket=tflocal-state" \
             -backend-config="key=${{ matrix.component }}-${{ matrix.context }}/terraform.tfstate" \
             -backend-config="region=${AWS_DEFAULT_REGION}" \
@@ -79,8 +80,8 @@ jobs:
 
       - name: Apply
         run: |
-          tofulocal -chdir=infrastructure/terraform/aws/${{ matrix.component }} apply \
+          tflocal -chdir=infrastructure/terraform/aws/${{ matrix.component }} apply \
             -auto-approve -var-file=contexts/${{ matrix.context }}.tfvars
 
       - name: Show created resources
-        run: tofulocal -chdir=infrastructure/terraform/aws/${{ matrix.component }} state list
+        run: tflocal -chdir=infrastructure/terraform/aws/${{ matrix.component }} state list

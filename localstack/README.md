@@ -10,7 +10,8 @@ credentials. **No changes to the Terraform are required.**
 
 - Docker
 - OpenTofu
-- `pip install terraform-local` (provides `tofulocal`)
+- `pip install terraform-local` (provides `tflocal`; the Makefile sets
+  `TF_CMD=tofu` so it drives OpenTofu instead of Terraform)
 
 ## Usage
 
